@@ -33,7 +33,7 @@ st.markdown("""
 # =============================================================================
 try:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-pro-latest')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception:
     st.error("Chave da API do Google não configurada.")
     st.stop()
