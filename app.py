@@ -3,6 +3,9 @@ import pandas as pd
 from agent_logic import agent_onboarding, agent_executor, process_tool_call
 from tools import load_dataframes_from_zip
 
+# LINHA DE DEPURAÇÃO: Adicione esta linha!
+st.write("Segredos carregados:", st.secrets.to_dict())
+
 # =============================================================================
 # 1. CONFIGURAÇÃO DA PÁGINA E ESTILO
 # =============================================================================
