@@ -1,7 +1,3 @@
-# DevÆGENT-I (Intelligence): O prompt foi aprimorado para suportar um ciclo de raciocínio multi-passo.
-# A adição de 'observations' permite que o agente aprenda com os resultados das ferramentas anteriores
-# e planeje os próximos passos de forma mais inteligente para resolver problemas complexos.
-
 def get_agent_prompt(scope, chat_history, tools_description, available_files, observations, query):
     """Gera o prompt principal para o agente ReAct multi-passo."""
     history_str = "\n".join([f'{msg["role"]}: {str(msg["content"])}' for msg in chat_history if isinstance(msg["content"], str)])
