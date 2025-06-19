@@ -54,3 +54,72 @@ Siga estes passos para executar a aplicação localmente.
 ```bash
 git clone https://github.com/seu-usuario/data-insights-pro.git
 cd data-insights-pro
+Use code with caution.
+Markdown
+2. Instale as Dependências
+Crie um ambiente virtual (recomendado) e instale os pacotes necessários.
+
+Generated bash
+# Crie e ative um ambiente virtual (opcional, mas recomendado)
+python -m venv venv
+source venv/bin/activate  # No Windows: venv\Scripts\activate
+
+# Instale os pacotes
+pip install -r requirements.txt
+Use code with caution.
+Bash
+3. Configure sua API Key do Google
+Para que o agente de IA funcione, você precisa fornecer sua API Key do Google Gemini. O Streamlit carrega essa chave de forma segura através do arquivo secrets.toml.
+
+Crie uma pasta chamada .streamlit no diretório raiz do seu projeto.
+
+Dentro dela, crie um arquivo chamado secrets.toml.
+
+Adicione o seguinte conteúdo ao arquivo, substituindo "sua_chave_aqui" pela sua chave real:
+
+Generated toml
+# .streamlit/secrets.toml
+
+GOOGLE_API_KEY = "sua_chave_aqui"
+Use code with caution.
+Toml
+4. Execute a Aplicação
+Com tudo configurado, inicie o servidor do Streamlit:
+
+Generated bash
+streamlit run app.py
+
+Abra seu navegador e acesse o endereço http://localhost:8501.
+
+📁 Estrutura do Projeto
+Generated code
+📂 data-insights-pro/
+├── .streamlit/
+│   └── 📜 secrets.toml      # Armazena as chaves de API (não versionar no Git!)
+├── 📜 app.py               # Ponto de entrada da UI (O Maestro)
+├── 📜 agent_logic.py        # Lógica de comunicação com a IA (O Estrategista)
+├── 📜 tools.py              # Funções que o agente pode executar (A Caixa de Ferramentas)
+├── 📜 requirements.txt       # Lista de dependências Python
+└── 📜 README.md             # Esta documentação
+🛠️ Tecnologias Utilizadas
+Frontend: Streamlit
+
+IA & LLM: Google Gemini 1.5 Flash
+
+Análise de Dados: Pandas
+
+Visualização: Matplotlib, Seaborn
+
+Busca na Web: DuckDuckGo Search
+
+🗺️ Próximos Passos (Roadmap)
+Containerização: Criar um Dockerfile para empacotar a aplicação e facilitar o deploy.
+
+Deploy na Nuvem: Publicar a aplicação em plataformas como Streamlit Community Cloud ou Google Cloud Run.
+
+Expandir Ferramentas: Adicionar novas ferramentas ao agente (ex: salvar arquivos, conectar a bancos de dados).
+
+Cache Avançado: Implementar caching mais granular para os resultados das ferramentas, reduzindo custos de API e latência.
+
+📄 Licença
+Este projeto está sob a Licença MIT. Veja o arquivo LICENSE para mais detalhes.
