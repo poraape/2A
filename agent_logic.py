@@ -46,14 +46,13 @@ def extract_json_from_response(text):
 def agent_executor(query, chat_history, scope, observations):
     """
     Executa um único passo do ciclo ReAct.
-    DevÆGENT-I: Esta função agora é chamada iterativamente. Ela recebe as 'observations'
-    dos passos anteriores para tomar decisões mais informadas.
     """
     tools_description = "\n".join([f"- `{name}`: {func.__doc__.strip()}" for name, func in TOOLS.items()])
     available_files = list(st.session_state.dataframes.keys())
 
-    prompt = get_agent_prompt(scope, chat_history, tools_description, available_files, observations)
-    prompt = prompt.format(query=query)
+    # DevÆGENT-R (Correção): A variável `query` agora é passada diretamente para a função de criação do prompt.
+    # A linha problemática `.format(query=query)` foi removida.
+    prompt = get_agent_prompt(scope, chat_history, tools_description, available_files, observations, query)
     
     response = model.generate_content(prompt)
     thought_process = response.text
@@ -68,7 +67,6 @@ def agent_executor(query, chat_history, scope, observations):
     except json.JSONDecodeError:
         error_message = f"Ocorreu um erro. O agente gerou uma resposta com JSON malformado. Resposta recebida:\n{thought_process}"
         return {"tool": "final_answer", "tool_input": error_message}, thought_process
-
 def process_tool_call(action_json, scope):
     """Processa a chamada da ferramenta decidida pelo agente."""
     tool_name = action_json.get("tool")
