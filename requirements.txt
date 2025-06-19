@@ -6,3 +6,4 @@ matplotlib
 seaborn
 sentence-transformers
 faiss-cpu
+python-dotenv
