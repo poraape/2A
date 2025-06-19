@@ -1,3 +1,5 @@
+# agent_logic.py
+
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
@@ -5,19 +7,28 @@ import json
 import re
 from tools import TOOLS
 from prompts import get_agent_prompt, get_strategic_questions_prompt
+import os  # Importe o módulo os
+from dotenv import load_dotenv  # Importe a função load_dotenv
 
 @st.cache_resource
 def load_gemini_model():
-    """Carrega e configura o modelo Gemini."""
+    """Carrega e configura o modelo Gemini usando variáveis de ambiente."""
+    # Carrega as variáveis do arquivo .env para o ambiente do sistema
+    load_dotenv()
+
     try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
+        # Pega a chave de API do ambiente
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            # Se a chave não for encontrada, exibe um erro claro.
+            st.error("A variável de ambiente GOOGLE_API_KEY não foi encontrada. Verifique seu arquivo .env.")
+            st.stop()
+
         genai.configure(api_key=api_key)
         return genai.GenerativeModel('gemini-1.5-flash-latest')
     except Exception as e:
-        st.error(f"Erro ao configurar a API do Google: {e}")
+        st.error(f"Erro ao configurar a API do Google. Detalhe: {e}")
         st.stop()
-
-model = load_gemini_model()
 
 def suggest_strategic_questions(dataframes):
     """Gera perguntas estratégicas com base em uma amostra dos dados."""
