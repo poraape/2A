@@ -1,125 +1,114 @@
 # 🍏 Data Insights Pro
 
-[![Python Version](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Framework](https://img.shields.io/badge/Framework-Streamlit-red.svg)](https://streamlit.io)
+**Transforme seus dados em diálogos. Um agente de IA para análise de dados interativa.**
+
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Framework: Streamlit](https://img.shields.io/badge/Framework-Streamlit-red.svg)](https://streamlit.io)
 
-**Converse com seus dados.** Data Insights Pro é uma aplicação web que utiliza um agente de IA (Google Gemini) para permitir que usuários analisem conjuntos de dados complexos através de uma interface de chat intuitiva. Faça upload de múltiplos arquivos CSV, faça perguntas em linguagem natural e obtenha insights, cálculos e visualizações em tempo real.
-
-![GIF da Aplicação em Ação](https://i.imgur.com/your-app-demo.gif)
-*(Sugestão: Grave um GIF curto da sua aplicação funcionando e substitua o link acima para um impacto visual máximo.)*
+Data Insights Pro é uma aplicação web construída com Streamlit que permite a usuários fazer upload de múltiplos arquivos CSV (dentro de um `.zip`) e interagir com eles através de um agente de IA conversacional. Faça perguntas em linguagem natural, peça cálculos, gere visualizações e obtenha insights sem escrever uma única linha de código.
 
 ---
 
-## ✨ Principais Funcionalidades
+### ✨ Demonstração
 
-*   **Análise Conversacional:** Interaja com seus dados como se estivesse conversando com um analista de dados.
-*   **Upload de Múltiplos Arquivos:** Carregue um único arquivo `.zip` contendo múltiplos CSVs para uma análise integrada.
-*   **Arquitetura de Agente Inteligente:** Utiliza o padrão ReAct (Reasoning and Acting) para que a IA possa pensar e escolher a ferramenta certa para cada tarefa.
-*   **Ferramentas Poderosas:** O agente pode:
-    *   **Executar Código Python:** Realizar manipulações e cálculos complexos com Pandas.
-    *   **Gerar Gráficos:** Criar visualizações com Matplotlib e Seaborn.
-    *   **Pesquisar na Web:** Buscar informações contextuais ou atuais que não estão nos seus dados.
-    *   **Inspecionar Dados:** Listar arquivos e verificar o esquema (colunas e tipos de dados).
-*   **Código Modular e Robusto:** A arquitetura é separada em UI, lógica do agente e ferramentas, facilitando a manutenção e a expansão.
+*(Recomendação: Grave um GIF curto da aplicação em funcionamento e substitua o link abaixo. Ferramentas como [LICEcap](https://www.cockos.com/licecap/) ou [ScreenToGif](https://www.screentogif.com/) são ótimas para isso.)*
+
+![Demonstração do Data Insights Pro](https://user-images.githubusercontent.com/12345/example_gif.gif)
 
 ---
 
-## 🏛️ Arquitetura do Sistema
+### 🚀 Principais Funcionalidades
 
-O projeto segue uma arquitetura modular inspirada no conceito de "Maestro e Orquestra" para garantir clareza e separação de responsabilidades.
-
-*   `app.py` **(O Maestro 👨‍🏫):**
-    > Responsável exclusivamente pela interface do usuário (UI) e pelo gerenciamento do estado da sessão. Ele orquestra o fluxo, decidindo quando chamar a lógica do agente, mas não se preocupa com os detalhes da execução.
-
-*   `agent_logic.py` **(O Estrategista de IA 🧠):**
-    > O cérebro da aplicação. Ele se comunica com o modelo de IA (Gemini), formata os prompts, interpreta o plano de ação retornado pela IA e delega a execução das tarefas para as ferramentas apropriadas.
-
-*   `tools.py` **(A Caixa de Ferramentas 🧰):**
-    > Contém as funções especialistas que o agente pode utilizar. Cada função é uma ferramenta discreta e testável (ex: `python_code_interpreter`, `web_search`).
+*   **Upload Simplificado:** Carregue um ou mais arquivos `.csv` de uma só vez, compactados em um único arquivo `.zip`.
+*   **Agente de IA Inteligente:** Equipado com o modelo Gemini 1.5 Pro da Google, o agente utiliza um ciclo ReAct (Reasoning and Acting) para entender suas perguntas e planejar a execução.
+*   **Interpretador de Python Dinâmico:** O agente pode escrever e executar código Python (Pandas, Matplotlib, Seaborn) para realizar manipulações, cálculos e gerar gráficos sob demanda.
+*   **Busca na Web Integrada:** Faça perguntas que exigem conhecimento externo (ex: "Qual a cotação atual do dólar?") e o agente buscará a informação na web para complementar a análise.
+*   **Escopo de Análise Flexível:** Analise um arquivo CSV individualmente ou combine todos os arquivos carregados para uma visão agregada.
+*   **Interface Limpa e Intuitiva:** Design inspirado na estética Apple para uma experiência de usuário agradável e focada.
 
 ---
 
-## 🚀 Como Começar
+### 🏗️ Arquitetura do Projeto
 
-Siga estes passos para executar a aplicação localmente.
+O projeto segue uma arquitetura modular para facilitar a manutenção e a extensibilidade:
 
-### Pré-requisitos
+*   **`app.py` (O Maestro 👨‍🏫):** Ponto de entrada da aplicação. Controla a interface do usuário (UI) com o Streamlit, gerencia o estado da sessão e orquestra as chamadas para a lógica do agente.
+*   **`agent_logic.py` (O Estrategista de IA 🧠):** Contém toda a lógica de comunicação com o modelo Gemini. Formata os prompts, executa o ciclo ReAct e processa as respostas do modelo.
+*   **`tools.py` (A Caixa de Ferramentas 🧰):** Define as ferramentas que o agente pode usar, como o interpretador de Python, a busca na web e funções para inspecionar os dados carregados.
+*   **`requirements.txt` (A Lista de Compras 📦):** Lista todas as dependências Python necessárias para o projeto.
 
-*   Python 3.10 ou superior
-*   Git
+```
+📂 data-insights-pro/
+├── 📜 app.py
+├── 📜 agent_logic.py
+├── 📜 tools.py
+└── 📜 requirements.txt
+```
 
-### 1. Clone o Repositório
+---
 
+### 🛠️ Começando: Instalação e Configuração
+
+Siga estes passos para executar o Data Insights Pro em sua máquina local.
+
+#### 1. Pré-requisitos
+
+*   **Python 3.9 ou superior**
+*   **Git**
+
+#### 2. Clone o Repositório
 ```bash
 git clone https://github.com/seu-usuario/data-insights-pro.git
 cd data-insights-pro
-Use code with caution.
-Markdown
-2. Instale as Dependências
-Crie um ambiente virtual (recomendado) e instale os pacotes necessários.
+```
 
-Generated bash
-# Crie e ative um ambiente virtual (opcional, mas recomendado)
-python -m venv venv
-source venv/bin/activate  # No Windows: venv\Scripts\activate
+#### 3. Crie um Ambiente Virtual (Recomendado)
+*   **No macOS/Linux:**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+*   **No Windows:**
+    ```bash
+    python -m venv venv
+    .\venv\Scripts\activate
+    ```
 
-# Instale os pacotes
+#### 4. Instale as Dependências
+```bash
 pip install -r requirements.txt
-Use code with caution.
-Bash
-3. Configure sua API Key do Google
-Para que o agente de IA funcione, você precisa fornecer sua API Key do Google Gemini. O Streamlit carrega essa chave de forma segura através do arquivo secrets.toml.
+```
 
-Crie uma pasta chamada .streamlit no diretório raiz do seu projeto.
+#### 5. Configure sua API Key do Google
+O Streamlit utiliza um sistema de gerenciamento de segredos para manter suas chaves de API seguras.
 
-Dentro dela, crie um arquivo chamado secrets.toml.
+1.  Crie uma pasta chamada `.streamlit` na raiz do seu projeto.
+2.  Dentro da pasta `.streamlit`, crie um arquivo chamado `secrets.toml`.
+3.  Adicione sua chave da API do Google Gemini ao arquivo da seguinte forma:
 
-Adicione o seguinte conteúdo ao arquivo, substituindo "sua_chave_aqui" pela sua chave real:
+    ```toml
+    # .streamlit/secrets.toml
+    GOOGLE_API_KEY = "sua-chave-secreta-do-google-aqui"
+    ```
+    **Importante:** O arquivo `.gitignore` deste projeto já está configurado para ignorar o `secrets.toml`, garantindo que sua chave não seja enviada para o GitHub.
 
-Generated toml
-# .streamlit/secrets.toml
+---
 
-GOOGLE_API_KEY = "sua_chave_aqui"
-Use code with caution.
-Toml
-4. Execute a Aplicação
-Com tudo configurado, inicie o servidor do Streamlit:
+### ▶️ Como Usar
 
-Generated bash
-streamlit run app.py
+1.  Certifique-se de que seu ambiente virtual está ativado.
+2.  Execute o seguinte comando no terminal, a partir da raiz do projeto:
+    ```bash
+    streamlit run app.py
+    ```
+3.  Abra seu navegador no endereço local fornecido (geralmente `http://localhost:8501`).
+4.  Arraste e solte um arquivo `.zip` contendo seus CSVs na área de upload.
+5.  Comece a conversar com seus dados!
 
-Abra seu navegador e acesse o endereço http://localhost:8501.
+---
 
-📁 Estrutura do Projeto
-Generated code
-📂 data-insights-pro/
-├── .streamlit/
-│   └── 📜 secrets.toml      # Armazena as chaves de API (não versionar no Git!)
-├── 📜 app.py               # Ponto de entrada da UI (O Maestro)
-├── 📜 agent_logic.py        # Lógica de comunicação com a IA (O Estrategista)
-├── 📜 tools.py              # Funções que o agente pode executar (A Caixa de Ferramentas)
-├── 📜 requirements.txt       # Lista de dependências Python
-└── 📜 README.md             # Esta documentação
-🛠️ Tecnologias Utilizadas
-Frontend: Streamlit
+### 📄 Licença
 
-IA & LLM: Google Gemini 1.5 Flash
-
-Análise de Dados: Pandas
-
-Visualização: Matplotlib, Seaborn
-
-Busca na Web: DuckDuckGo Search
-
-🗺️ Próximos Passos (Roadmap)
-Containerização: Criar um Dockerfile para empacotar a aplicação e facilitar o deploy.
-
-Deploy na Nuvem: Publicar a aplicação em plataformas como Streamlit Community Cloud ou Google Cloud Run.
-
-Expandir Ferramentas: Adicionar novas ferramentas ao agente (ex: salvar arquivos, conectar a bancos de dados).
-
-Cache Avançado: Implementar caching mais granular para os resultados das ferramentas, reduzindo custos de API e latência.
-
-📄 Licença
-Este projeto está sob a Licença MIT. Veja o arquivo LICENSE para mais detalhes.
+Este projeto está licenciado sob a Licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+```
