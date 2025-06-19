@@ -1,0 +1,8 @@
+# DevÆGENT-E (Economy): A dependência 'tabulate' foi removida pois não era utilizada no código.
+# Manter as dependências enxutas reduz o tamanho do ambiente, acelera a instalação e diminui a superfície de ataque.
+streamlit
+pandas
+google-generativeai
+duckduckgo-search
+matplotlib
+seaborn
