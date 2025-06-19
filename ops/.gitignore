@@ -1,0 +1,22 @@
+# DevÆGENT-R (Robustness): Um .gitignore bem configurado é a primeira linha de defesa para
+# evitar o commit de segredos, dependências locais e arquivos de cache no repositório.
+
+# Ambientes Virtuais
+venv/
+*.venv
+env/
+ENV/
+.env
+
+# Arquivos de Segredos do Streamlit
+.streamlit/secrets.toml
+
+# Caches do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de cache e de sistema
+.DS_Store
+*.swp
