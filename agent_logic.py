@@ -8,7 +8,6 @@ from tools import TOOLS
 # =============================================================================
 # 1. CONFIGURAÇÃO E INICIALIZAÇÃO DO MODELO (COM CACHING)
 # =============================================================================
-# DevÆGENT-V3.0: Caching do modelo é crucial para performance e economia.
 @st.cache_resource
 def load_gemini_model():
     """Carrega e configura o modelo Gemini. O cache evita recargas e custos de API."""
@@ -25,8 +24,6 @@ model = load_gemini_model()
 # =============================================================================
 # 2. FUNÇÕES DO AGENTE
 # =============================================================================
-
-# DevÆGENT-V3.0: Nova função de IA, focada apenas em gerar perguntas.
 def suggest_strategic_questions(dataframes):
     """Usa a IA para gerar perguntas inteligentes com base em uma amostra dos dados."""
     try:
@@ -47,30 +44,36 @@ def suggest_strategic_questions(dataframes):
         return f"Não foi possível gerar perguntas: {e}"
 
 def agent_executor(query, chat_history, scope):
-    """O cérebro principal do agente ReAct."""
+    """O cérebro principal do agente ReAct, agora com conhecimento completo das ferramentas."""
     history_str = "\n".join([f'{msg["role"]}: {str(msg["content"])}' for msg in chat_history if isinstance(msg["content"], str)])
     
+    # DevÆGENT-V3.1: Constrói uma descrição detalhada das ferramentas para o prompt.
+    # Esta é a otimização CRÍTICA que aumenta a inteligência do agente.
+    tools_description = "\n".join([f"- `{name}`: {func.__doc__.strip()}" for name, func in TOOLS.items()])
+    
     prompt = f"""
-    Você é um Analista de Dados Autônomo (ReAct Agent). Use o ciclo Pensamento-Ação para responder ao usuário.
+    Você é um Analista de Dados Autônomo de elite (ReAct Agent). Sua missão é entender a pergunta do usuário e usar as ferramentas disponíveis para construir a resposta passo a passo.
 
-    **Contexto:**
-    - Escopo: {scope}
-    - Arquivos: {list(st.session_state.dataframes.keys())}
-    - Ferramentas: {list(TOOLS.keys())}
-    - Histórico: {history_str}
+    **Contexto da Análise:**
+    - Escopo Atual: {scope}
+    - Arquivos Disponíveis: {list(st.session_state.dataframes.keys())}
+    - Histórico da Conversa: {history_str}
 
-    **Ciclo de Trabalho:**
-    1.  **Thought:** Descreva seu plano de ação.
-    2.  **Action:** Responda APENAS com um bloco de código JSON. Ex: ```json\n{{"tool": "...", "tool_input": "..."}}\n```
-    3.  Se tiver a resposta, use a ferramenta 'final_answer'.
+    **Ferramentas Disponíveis (Use-as!):**
+    {tools_description}
 
-    **Pergunta do Usuário:** "{query}"
+    **Ciclo de Trabalho Obrigatório:**
+    1.  **Thought:** Descreva seu plano de ação em português. Pense em qual ferramenta é a mais adequada para a tarefa. Se precisar de código, planeje o código.
+    2.  **Action:** Responda APENAS com um bloco de código JSON contendo a ferramenta e sua entrada. Ex: ```json\n{{"tool": "web_search", "tool_input": "cotação BRL USD"}}\n```
+    3.  Se você já tem a resposta final com base nas observações anteriores, use a ferramenta 'final_answer'.
+
+    **Inicie o processo para a pergunta do usuário.**
+    **Pergunta:** "{query}"
     """
     
     response = model.generate_content(prompt)
     thought_process = response.text
 
-    # DevÆGENT-V3.0: Lógica de parsing de JSON robusta.
     try:
         json_block = re.search(r"```json\n(.*?)\n```", thought_process, re.DOTALL)
         json_str = json_block.group(1) if json_block else thought_process[thought_process.find('{'):thought_process.rfind('}')+1]
@@ -90,10 +93,12 @@ def process_tool_call(action_json, scope):
     if tool_name in TOOLS:
         try:
             tool_function = TOOLS[tool_name]
-            # Lógica de chamada de ferramenta adaptativa
+            # DevÆGENT-V3.1: Lógica de chamada de ferramenta mais explícita e robusta.
             if tool_name == "python_code_interpreter":
                 output = tool_function(code=tool_input, scope=scope)
-            elif tool_name in ["get_data_schema", "web_search"]:
+            elif tool_name == "get_data_schema":
+                output = tool_function(filename=tool_input)
+            elif tool_name == "web_search":
                 output = tool_function(query=tool_input)
             else: # Para list_available_data
                 output = tool_function()
