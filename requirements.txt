@@ -4,4 +4,3 @@ google-generativeai
 duckduckgo-search
 matplotlib
 seaborn
-tabulate
