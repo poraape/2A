@@ -1,13 +1,18 @@
 import streamlit as st
 from agent_logic import agent_executor, process_tool_call, suggest_strategic_questions
-from tools import process_uploaded_file, catalog_files_metadata, generate_global_analysis_summary, TOOLS
+from tools import process_uploaded_file, catalog_files_metadata, generate_global_analysis_summary
 from ui_components import display_onboarding_results, render_chat_message
+from cache_manager import SemanticCacheManager # DevÆGENT: Importa o novo gerenciador de cache
+
+# Inicializa o gerenciador de cache.
+# Graças ao @st.cache_resource, o modelo de embedding é carregado apenas uma vez.
+cache_manager = SemanticCacheManager()
 
 # =============================================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E ESTILO (UI Revertida)
+# 1. CONFIGURAÇÃO DA PÁGINA E ESTILO
 # =============================================================================
 st.set_page_config(page_title="Data Insights Pro", page_icon="🍏", layout="centered")
-
+# ... (o resto da configuração da página e CSS permanece o mesmo)
 def load_css():
     st.markdown("""
     <style>
@@ -27,7 +32,6 @@ def load_css():
     """, unsafe_allow_html=True)
 
 load_css()
-
 # =============================================================================
 # 2. ESTADO DA SESSÃO
 # =============================================================================
@@ -41,58 +45,72 @@ def initialize_session_state():
 initialize_session_state()
 
 # =============================================================================
-# 3. LÓGICA DO CHAT (AGORA COM LOOP ReAct)
+# 3. LÓGICA DO CHAT (AGORA COM CACHE SEMÂNTICO)
 # =============================================================================
 def run_chat_logic(prompt: str):
     """
-    Encapsula a lógica de execução do agente em um loop ReAct multi-passo.
+    Encapsula a lógica de execução do agente, agora com um passo inicial de verificação de cache.
     """
     st.session_state.messages.append({"role": "user", "content": prompt})
     
-    # DevÆGENT-R (Robustness): MAX_STEPS previne loops infinitos, uma salvaguarda crucial para agentes autônomos.
+    # DevÆGENT-E (Economy): Antes de gastar tokens com o agente, verificamos o cache.
+    cached_response = cache_manager.search_cache(prompt)
+    if cached_response:
+        response_with_marker = f"♻️ **Resposta encontrada no cache:**\n\n{cached_response}"
+        st.session_state.messages.append({"role": "assistant", "content": response_with_marker})
+        st.rerun()
+        return
+
+    # Se não houver cache, o fluxo normal do agente continua...
     MAX_STEPS = 7
     observations = []
+    final_response = None
     
     with st.chat_message("assistant"):
         for step in range(MAX_STEPS):
             with st.spinner(f"Passo {step + 1}: Pensando..."):
                 action_json, thought_process = agent_executor(prompt, st.session_state.messages, st.session_state.active_scope, observations)
             
-            # Exibe o pensamento do agente
             st.session_state.messages.append({"role": "assistant", "content": {"thought": thought_process}})
-            st.rerun() # Atualiza a UI para mostrar o pensamento imediatamente
+            st.rerun()
 
             tool_name = action_json.get("tool")
             if tool_name == "final_answer":
                 final_response = action_json.get("tool_input", "Análise concluída.")
                 st.session_state.messages.append({"role": "assistant", "content": final_response})
-                st.rerun()
-                return # Encerra o loop
+                break 
 
-            # Executa a ferramenta e coleta a observação
             with st.spinner(f"Passo {step + 1}: Executando ferramenta `{tool_name}`..."):
                 tool_output = process_tool_call(action_json, st.session_state.active_scope)
 
             if "figure" in str(type(tool_output)):
-                # Se a ferramenta retorna um gráfico, exibe-o e encerra.
                 st.session_state.messages.append({"role": "assistant", "content": tool_output})
-                st.rerun()
-                return
+                final_response = "Gráfico gerado." # Salva um texto placeholder para o cache
+                break
 
-            observation_text = f"**Resultado da Ferramenta `{tool_name}`:**\n\n```\n{str(tool_output)}\n```"
+            observation_text = f"Resultado da Ferramenta `{tool_name}`: {str(tool_output)}"
             observations.append(observation_text)
             st.session_state.messages.append({"role": "assistant", "content": {"observation": str(tool_output), "tool": tool_name}})
-            st.rerun() # Atualiza a UI para mostrar a observação
+            st.rerun()
         
-        # Se o loop terminar por atingir MAX_STEPS
-        st.warning(f"O agente atingiu o limite de {MAX_STEPS} passos sem chegar a uma resposta final. Por favor, tente reformular a pergunta.")
-        st.session_state.messages.append({"role": "assistant", "content": "Não consegui concluir a análise. Tente ser mais específico."})
-        st.rerun()
+        if final_response is None:
+            final_response = "Não consegui concluir a análise. Tente ser mais específico."
+            st.warning(f"O agente atingiu o limite de {MAX_STEPS} passos.")
+            st.session_state.messages.append({"role": "assistant", "content": final_response})
+
+    # DevÆGENT-I (Intelligence): Salva a nova resposta no cache para uso futuro.
+    if final_response:
+        cache_manager.add_to_cache(question=prompt, answer=final_response)
+    
+    st.rerun()
 
 # =============================================================================
 # 4. RENDERIZAÇÃO DA INTERFACE
 # =============================================================================
+# O restante do arquivo app.py (renderização da UI) não precisa de alterações.
+# ... (código da UI igual ao da iteração anterior) ...
 
+# --- TELA DE UPLOAD (ESTADO INICIAL) ---
 if st.session_state.dataframes is None:
     st.title("🍏 Data Insights Pro")
     st.markdown("##### Transforme dados brutos em insights claros. Comece fazendo o upload.")
@@ -111,6 +129,7 @@ if st.session_state.dataframes is None:
                 }
                 st.session_state.active_scope = "Analisar Todos em Conjunto"
                 st.rerun()
+# --- TELA DE CHAT E ANÁLISE (ESTADO PRINCIPAL) ---
 else:
     if not st.session_state.messages:
         display_onboarding_results(**st.session_state.onboarding_data)
