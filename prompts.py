@@ -44,3 +44,13 @@ def get_agent_prompt(scope, chat_history, tools_description, available_files, ob
         ```
     ---
     """
+
+def get_strategic_questions_prompt(data_sample_markdown):
+    """Gera o prompt para sugerir perguntas estratégicas."""
+    return f"""
+    Você é um Analista de Dados Sênior. Baseado na amostra de dados de múltiplos arquivos abaixo, gere exatamente 3 perguntas de negócio inteligentes e acionáveis que um executivo faria.
+    Seja conciso e direto. Responda apenas com a lista de perguntas numeradas.
+
+    Amostra dos Dados:
+    {data_sample_markdown}
+    """
