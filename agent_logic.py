@@ -1,3 +1,4 @@
+
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
@@ -14,7 +15,7 @@ def load_gemini_model():
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-1.5-flash')
+        return genai.GenerativeModel('gemini-1.5-pro-latest')
     except Exception as e:
         st.error(f"Erro ao configurar a API do Google. Verifique sua GOOGLE_API_KEY. Detalhe: {e}")
         st.stop()
@@ -25,7 +26,7 @@ model = load_gemini_model()
 # 2. FUNÇÕES DO AGENTE
 # =============================================================================
 def suggest_strategic_questions(dataframes):
-    """Usa a IA para gerar perguntas inteligentes com base em uma amostra dos dados."""
+    # ... (sem alterações nesta função)
     try:
         combined_head = pd.concat([df.head(2) for df in dataframes.values()]).to_markdown()
         prompt = f"""
@@ -44,13 +45,12 @@ def suggest_strategic_questions(dataframes):
         return f"Não foi possível gerar perguntas: {e}"
 
 def agent_executor(query, chat_history, scope):
-    """O cérebro principal do agente ReAct, agora com conhecimento completo das ferramentas."""
+    """O cérebro principal do agente ReAct, agora com conhecimento completo e regras estritas."""
     history_str = "\n".join([f'{msg["role"]}: {str(msg["content"])}' for msg in chat_history if isinstance(msg["content"], str)])
     
-    # DevÆGENT-V3.1: Constrói uma descrição detalhada das ferramentas para o prompt.
-    # Esta é a otimização CRÍTICA que aumenta a inteligência do agente.
     tools_description = "\n".join([f"- `{name}`: {func.__doc__.strip()}" for name, func in TOOLS.items()])
     
+    # DevÆGENT-V3.3: A otimização CRÍTICA está na nova diretiva do prompt.
     prompt = f"""
     Você é um Analista de Dados Autônomo de elite (ReAct Agent). Sua missão é entender a pergunta do usuário e usar as ferramentas disponíveis para construir a resposta passo a passo.
 
@@ -59,13 +59,24 @@ def agent_executor(query, chat_history, scope):
     - Arquivos Disponíveis: {list(st.session_state.dataframes.keys())}
     - Histórico da Conversa: {history_str}
 
-    **Ferramentas Disponíveis (Use-as!):**
+    **Ferramentas Disponíveis:**
     {tools_description}
 
+    ---
+    **DIRETIVA CRÍTICA PARA `python_code_interpreter`:**
+    A ferramenta `python_code_interpreter` AUTOMATICAMENTE carrega os dados do escopo atual em uma variável chamada `df`.
+    Você **NUNCA** deve gerar código que tente ler arquivos do disco (ex: `pd.read_csv()`). SEMPRE opere diretamente na variável `df`.
+
+    -   **ERRADO:** `meu_df = pd.read_csv('{scope}'); resultado = len(meu_df)`
+    -   **CERTO:** `resultado = len(df)`
+    -   **ERRADO:** `df_itens = pd.read_csv('202401_NFs_Itens.csv'); resultado = df_itens['Valor'].sum()`
+    -   **CERTO:** `resultado = df['Valor'].sum()` (quando o escopo está definido para '202401_NFs_Itens.csv')
+    ---
+
     **Ciclo de Trabalho Obrigatório:**
-    1.  **Thought:** Descreva seu plano de ação em português. Pense em qual ferramenta é a mais adequada para a tarefa. Se precisar de código, planeje o código.
-    2.  **Action:** Responda APENAS com um bloco de código JSON contendo a ferramenta e sua entrada. Ex: ```json\n{{"tool": "web_search", "tool_input": "cotação BRL USD"}}\n```
-    3.  Se você já tem a resposta final com base nas observações anteriores, use a ferramenta 'final_answer'.
+    1.  **Thought:** Descreva seu plano de ação em português. Se precisar de código, planeje o código correto usando a variável `df`.
+    2.  **Action:** Responda APENAS com um bloco de código JSON contendo a ferramenta e sua entrada.
+    3.  Se você já tem a resposta final, use a ferramenta 'final_answer'.
 
     **Inicie o processo para a pergunta do usuário.**
     **Pergunta:** "{query}"
@@ -83,7 +94,7 @@ def agent_executor(query, chat_history, scope):
         return {"tool": "final_answer", "tool_input": response.text}, thought_process
 
 def process_tool_call(action_json, scope):
-    """Executa a ferramenta escolhida pelo agente e retorna o resultado."""
+    # ... (sem alterações nesta função)
     tool_name = action_json.get("tool")
     tool_input = action_json.get("tool_input")
 
@@ -93,14 +104,13 @@ def process_tool_call(action_json, scope):
     if tool_name in TOOLS:
         try:
             tool_function = TOOLS[tool_name]
-            # DevÆGENT-V3.1: Lógica de chamada de ferramenta mais explícita e robusta.
             if tool_name == "python_code_interpreter":
                 output = tool_function(code=tool_input, scope=scope)
             elif tool_name == "get_data_schema":
                 output = tool_function(filename=tool_input)
             elif tool_name == "web_search":
                 output = tool_function(query=tool_input)
-            else: # Para list_available_data
+            else:
                 output = tool_function()
 
             if "figure" in str(type(output)):
