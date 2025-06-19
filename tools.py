@@ -10,7 +10,6 @@ from duckduckgo_search import DDGS
 # FUNÇÕES DO PIPELINE DE ONBOARDING E DADOS
 # =============================================================================
 
-# DevÆGENT-V3.0: Nova função para lidar com uploads flexíveis. O cache acelera recargas.
 @st.cache_data
 def process_uploaded_file(uploaded_file):
     """Processa um arquivo .zip ou .csv e retorna um dicionário de DataFrames."""
@@ -34,23 +33,16 @@ def unpack_zip_to_dataframes(zip_file):
         st.error(f"Erro ao processar o arquivo zip: {e}")
         return None
 
-# DevÆGENT-V3.0: Nova função determinística para catalogar metadados.
 def catalog_files_metadata(dataframes):
     """Cria um dicionário com os metadados de cada DataFrame."""
     catalog = {}
     for name, df in dataframes.items():
-        catalog[name] = {
-            "linhas": len(df),
-            "colunas": len(df.columns),
-            "nomes_colunas": list(df.columns)
-        }
+        catalog[name] = {"linhas": len(df), "colunas": len(df.columns), "nomes_colunas": list(df.columns)}
     return catalog
 
-# DevÆGENT-V3.0: Nova função determinística para o resumo estatístico.
 def generate_global_analysis_summary(dataframes):
     """Combina todos os DataFrames e gera um resumo estatístico."""
-    if not dataframes:
-        return pd.DataFrame()
+    if not dataframes: return pd.DataFrame()
     combined_df = pd.concat(dataframes.values(), ignore_index=True)
     return combined_df.describe(include='all').fillna("N/A")
 
@@ -65,7 +57,12 @@ def get_active_df(scope: str):
 # =============================================================================
 
 def python_code_interpreter(code: str, scope: str):
-    """Executa código Python para análise/visualização de dados. O resultado deve ser salvo na variável 'resultado'."""
+    """
+    Executa código Python para análise ou visualização de dados. Essencial para cálculos, manipulações e gráficos.
+    O código DEVE usar um DataFrame chamado `df`.
+    Para retornar um valor (texto, número, tabela), salve-o em uma variável chamada `resultado`.
+    Para gerar um gráfico, crie um objeto de figura Matplotlib (ex: `fig, ax = plt.subplots()`) e salve a figura `fig` na variável `resultado`.
+    """
     try:
         active_df = get_active_df(scope)
         if active_df is None: return "Erro: Nenhum dado no escopo."
@@ -77,28 +74,33 @@ def python_code_interpreter(code: str, scope: str):
             fig = local_namespace['resultado']
             plt.close(fig) 
             return fig
-        return local_namespace.get('resultado', "Código executado.")
+        return local_namespace.get('resultado', "Código executado com sucesso, sem resultado explícito.")
     except Exception as e:
         return f"Erro ao executar código: {e}"
 
 def web_search(query: str):
-    """Realiza uma busca na web para informações atuais."""
+    """
+    Realiza uma busca na web para encontrar informações atuais ou de conhecimento geral. Use para perguntas sobre cotações, definições, notícias ou qualquer coisa que não esteja nos dados.
+    """
     try:
         with DDGS() as ddgs:
             results = [r['body'] for r in ddgs.text(query, max_results=3)]
-        return "\n".join(results) if results else "Nenhum resultado."
+        return "\n".join(results) if results else "Nenhum resultado encontrado."
     except Exception as e:
         return f"Erro na busca web: {e}"
 
 def list_available_data():
-    """Lista os arquivos de dados disponíveis."""
+    """
+    Lista os nomes de todos os arquivos de dados (CSVs) que foram carregados e estão disponíveis para análise.
+    """
     return f"Arquivos disponíveis: {', '.join(st.session_state.dataframes.keys())}"
 
-def get_data_schema(query: str):
-    """Fornece o esquema (colunas, tipos de dados) de um arquivo específico."""
-    filename = query
+def get_data_schema(filename: str):
+    """
+    Fornece o esquema detalhado (nomes das colunas, tipos de dados, contagem de valores não nulos) de um arquivo de dados específico.
+    """
     if filename not in st.session_state.dataframes:
-        return f"Erro: Arquivo '{filename}' não encontrado."
+        return f"Erro: Arquivo '{filename}' não encontrado. Use a ferramenta 'list_available_data' para ver os nomes corretos."
     df = st.session_state.dataframes[filename]
     buffer = io.StringIO()
     df.info(buf=buffer)
