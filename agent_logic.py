@@ -67,6 +67,7 @@ def agent_executor(query, chat_history, scope, observations):
     except json.JSONDecodeError:
         error_message = f"Ocorreu um erro. O agente gerou uma resposta com JSON malformado. Resposta recebida:\n{thought_process}"
         return {"tool": "final_answer", "tool_input": error_message}, thought_process
+        
 def process_tool_call(action_json, scope):
     """Processa a chamada da ferramenta decidida pelo agente."""
     tool_name = action_json.get("tool")
