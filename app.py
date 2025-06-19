@@ -1,21 +1,21 @@
 import streamlit as st
 from agent_logic import agent_executor, process_tool_call, suggest_strategic_questions
-from tools import process_uploaded_file, catalog_files_metadata, generate_global_analysis_summary
+from tools import process_uploaded_file, catalog_files_metadata, generate_global_analysis_summary, TOOLS
 from ui_components import display_onboarding_results, render_chat_message
 
 # =============================================================================
-# 1. CONFIGURAÇÃO DA PÁGINA E ESTILO
+# 1. CONFIGURAÇÃO DA PÁGINA E ESTILO (UI Revertida)
 # =============================================================================
-st.set_page_config(page_title="DevÆGENT BI", page_icon="⚜️", layout="centered")
+st.set_page_config(page_title="Data Insights Pro", page_icon="🍏", layout="centered")
 
 def load_css():
     st.markdown("""
     <style>
-        :root { --primary-color: #1E90FF; } /* Dodger Blue */
+        :root { --primary-color: #007AFF; } /* Apple Blue */
         html, body, [class*="st-"] { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-        .block-container { max-width: 820px; padding: 2rem 1rem; }
+        .block-container { max-width: 760px; padding: 2rem 1rem; }
         .stButton>button {
-            border-radius: 8px; font-weight: 500; border: 1px solid var(--primary-color);
+            border-radius: 10px; font-weight: 500; border: 1px solid var(--primary-color);
             background-color: white; color: var(--primary-color); transition: all 0.2s ease-in-out;
         }
         .stButton>button:hover {
@@ -32,7 +32,6 @@ load_css()
 # 2. ESTADO DA SESSÃO
 # =============================================================================
 def initialize_session_state():
-    """Inicializa as variáveis no estado da sessão para manter a consistência entre os reruns."""
     if "messages" not in st.session_state: st.session_state.messages = []
     if "dataframes" not in st.session_state: st.session_state.dataframes = None
     if "active_scope" not in st.session_state: st.session_state.active_scope = "Nenhum"
@@ -42,50 +41,69 @@ def initialize_session_state():
 initialize_session_state()
 
 # =============================================================================
-# 3. LÓGICA DO CHAT (FUNÇÃO PRINCIPAL)
+# 3. LÓGICA DO CHAT (AGORA COM LOOP ReAct)
 # =============================================================================
 def run_chat_logic(prompt: str):
-    """Encapsula a lógica de execução do agente e processamento de resposta."""
+    """
+    Encapsula a lógica de execução do agente em um loop ReAct multi-passo.
+    """
     st.session_state.messages.append({"role": "user", "content": prompt})
     
-    with st.chat_message("assistant"):
-        with st.spinner("Analisando e executando..."):
-            # O agente pensa e decide qual ferramenta usar.
-            action_json, thought_process = agent_executor(prompt, st.session_state.messages, st.session_state.active_scope)
-            
-            # O pensamento do agente é guardado para fins de depuração e transparência.
-            st.session_state.messages.append({"role": "assistant", "content": {"thought": thought_process}})
-            
-            # A ferramenta é executada e a resposta final é obtida.
-            final_response = process_tool_call(action_json, st.session_state.active_scope)
-
-            if final_response:
-                st.session_state.messages.append({"role": "assistant", "content": final_response})
+    # DevÆGENT-R (Robustness): MAX_STEPS previne loops infinitos, uma salvaguarda crucial para agentes autônomos.
+    MAX_STEPS = 7
+    observations = []
     
-    st.rerun()
+    with st.chat_message("assistant"):
+        for step in range(MAX_STEPS):
+            with st.spinner(f"Passo {step + 1}: Pensando..."):
+                action_json, thought_process = agent_executor(prompt, st.session_state.messages, st.session_state.active_scope, observations)
+            
+            # Exibe o pensamento do agente
+            st.session_state.messages.append({"role": "assistant", "content": {"thought": thought_process}})
+            st.rerun() # Atualiza a UI para mostrar o pensamento imediatamente
+
+            tool_name = action_json.get("tool")
+            if tool_name == "final_answer":
+                final_response = action_json.get("tool_input", "Análise concluída.")
+                st.session_state.messages.append({"role": "assistant", "content": final_response})
+                st.rerun()
+                return # Encerra o loop
+
+            # Executa a ferramenta e coleta a observação
+            with st.spinner(f"Passo {step + 1}: Executando ferramenta `{tool_name}`..."):
+                tool_output = process_tool_call(action_json, st.session_state.active_scope)
+
+            if "figure" in str(type(tool_output)):
+                # Se a ferramenta retorna um gráfico, exibe-o e encerra.
+                st.session_state.messages.append({"role": "assistant", "content": tool_output})
+                st.rerun()
+                return
+
+            observation_text = f"**Resultado da Ferramenta `{tool_name}`:**\n\n```\n{str(tool_output)}\n```"
+            observations.append(observation_text)
+            st.session_state.messages.append({"role": "assistant", "content": {"observation": str(tool_output), "tool": tool_name}})
+            st.rerun() # Atualiza a UI para mostrar a observação
+        
+        # Se o loop terminar por atingir MAX_STEPS
+        st.warning(f"O agente atingiu o limite de {MAX_STEPS} passos sem chegar a uma resposta final. Por favor, tente reformular a pergunta.")
+        st.session_state.messages.append({"role": "assistant", "content": "Não consegui concluir a análise. Tente ser mais específico."})
+        st.rerun()
 
 # =============================================================================
 # 4. RENDERIZAÇÃO DA INTERFACE
 # =============================================================================
 
-# --- TELA DE UPLOAD (ESTADO INICIAL) ---
 if st.session_state.dataframes is None:
-    st.title("⚜️ DevÆGENT BI")
-    st.markdown("##### Um agente de IA para análise de dados interativa. Comece fazendo o upload.")
+    st.title("🍏 Data Insights Pro")
+    st.markdown("##### Transforme dados brutos em insights claros. Comece fazendo o upload.")
     st.markdown("---")
-    
-    uploaded_file = st.file_uploader(
-        "Carregue um arquivo `.zip` (com múltiplos CSVs) ou um único `.csv`",
-        type=["zip", "csv"],
-        label_visibility="collapsed"
-    )
+    uploaded_file = st.file_uploader("Carregue um arquivo `.zip` ou `.csv`", type=["zip", "csv"], label_visibility="collapsed")
     
     if uploaded_file:
-        with st.spinner("Processando e catalogando seus dados... Por favor, aguarde."):
+        with st.spinner("Processando e analisando seus dados..."):
             dfs = process_uploaded_file(uploaded_file)
             if dfs:
                 st.session_state.dataframes = dfs
-                # Análise inicial é feita apenas uma vez.
                 st.session_state.onboarding_data = {
                     "metadata": catalog_files_metadata(dfs),
                     "summary_df": generate_global_analysis_summary(dfs),
@@ -93,30 +111,22 @@ if st.session_state.dataframes is None:
                 }
                 st.session_state.active_scope = "Analisar Todos em Conjunto"
                 st.rerun()
-
-# --- TELA DE CHAT E ANÁLISE (ESTADO PRINCIPAL) ---
 else:
-    # Mostra o painel de onboarding apenas na primeira vez (quando o chat está vazio).
     if not st.session_state.messages:
         display_onboarding_results(**st.session_state.onboarding_data)
-        st.session_state.messages.append({"role": "assistant", "content": "Estou pronto para ajudar. Faça uma pergunta ou escolha uma das sugestões acima."})
+        st.session_state.messages.append({"role": "assistant", "content": "Estou pronto para ajudar. Faça uma pergunta ou escolha uma das sugestões."})
 
-    st.title("⚜️ Conversando com seus Dados")
+    st.title("🍏 Conversando com seus Dados")
     
     options = ["Analisar Todos em Conjunto"] + list(st.session_state.dataframes.keys())
-    st.selectbox("**Escopo da Análise:**", options, key="active_scope", label_visibility="visible")
-    
+    st.selectbox("Escopo da Análise:", options, key="active_scope", label_visibility="collapsed")
     st.markdown("---")
 
-    # Exibe o histórico de chat
     for msg in st.session_state.messages:
         render_chat_message(msg)
 
-    # DevÆGENT-R (Robustness): A lógica de usar um prompt de um botão de sugestão foi
-    # refatorada para ser mais robusta, usando um callback e uma variável de estado dedicada.
-    # Isso elimina a necessidade de um `st.rerun()` manual no componente de UI.
     if prompt_from_suggestion := st.session_state.run_prompt_from_suggestion:
-        st.session_state.run_prompt_from_suggestion = None  # Reseta imediatamente
+        st.session_state.run_prompt_from_suggestion = None
         run_chat_logic(prompt_from_suggestion)
 
     elif prompt_from_input := st.chat_input(f"Pergunte sobre '{st.session_state.active_scope}'..."):
