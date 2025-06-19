@@ -1,4 +1,3 @@
-
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
@@ -15,7 +14,8 @@ def load_gemini_model():
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-1.5-flash')
+        # DevÆGENT-Flash: Modelo alterado para a versão Flash.
+        return genai.GenerativeModel('gemini-1.5-flash-latest')
     except Exception as e:
         st.error(f"Erro ao configurar a API do Google. Verifique sua GOOGLE_API_KEY. Detalhe: {e}")
         st.stop()
@@ -26,17 +26,13 @@ model = load_gemini_model()
 # 2. FUNÇÕES DO AGENTE
 # =============================================================================
 def suggest_strategic_questions(dataframes):
-    # ... (sem alterações nesta função)
+    # ... (sem alterações nesta função, já é simples o suficiente para o Flash)
     try:
         combined_head = pd.concat([df.head(2) for df in dataframes.values()]).to_markdown()
         prompt = f"""
-        Você é um Analista de Dados Sênior. Sua tarefa é inspirar um usuário, sugerindo análises inteligentes.
-        Baseado na seguinte amostra de dados combinados, gere uma lista de 3 a 4 perguntas estratégicas e acionáveis.
-        As perguntas devem explorar diferentes ângulos: uma sobre um insight geral, uma sobre uma correlação, e uma que sugira uma visualização.
-        
-        Amostra de Dados:
+        Você é um Analista de Dados. Baseado na amostra de dados abaixo, gere 3 perguntas inteligentes para análise.
+        Amostra:
         {combined_head}
-        
         Responda apenas com a lista de perguntas.
         """
         response = model.generate_content(prompt)
@@ -45,41 +41,44 @@ def suggest_strategic_questions(dataframes):
         return f"Não foi possível gerar perguntas: {e}"
 
 def agent_executor(query, chat_history, scope):
-    """O cérebro principal do agente ReAct, agora com conhecimento completo e regras estritas."""
+    """O cérebro principal do agente ReAct, com prompt reforçado para o Gemini Flash."""
     history_str = "\n".join([f'{msg["role"]}: {str(msg["content"])}' for msg in chat_history if isinstance(msg["content"], str)])
     
     tools_description = "\n".join([f"- `{name}`: {func.__doc__.strip()}" for name, func in TOOLS.items()])
     
-    # DevÆGENT-V3.3: A otimização CRÍTICA está na nova diretiva do prompt.
+    # DevÆGENT-Flash: Prompt reforçado com regras mais estritas e explícitas para o Flash.
     prompt = f"""
-    Você é um Analista de Dados Autônomo de elite (ReAct Agent). Sua missão é entender a pergunta do usuário e usar as ferramentas disponíveis para construir a resposta passo a passo.
+    Você é um agente de análise de dados. Siga as regras estritamente.
 
-    **Contexto da Análise:**
-    - Escopo Atual: {scope}
+    **REGRAS GERAIS:**
+    1.  **Pense Primeiro:** Seu primeiro passo é SEMPRE o "Thought".
+    2.  **Aja Depois:** Seu segundo passo é SEMPRE a "Action" em formato JSON.
+    3.  **Uma Ferramenta por Vez:** Escolha apenas uma ferramenta por ciclo.
+
+    **CONTEXTO:**
+    - Escopo da Análise: {scope}
     - Arquivos Disponíveis: {list(st.session_state.dataframes.keys())}
-    - Histórico da Conversa: {history_str}
+    - Histórico: {history_str}
 
-    **Ferramentas Disponíveis:**
+    **FERRAMENTAS (Use as descrições para decidir):**
     {tools_description}
 
-    ---
-    **DIRETIVA CRÍTICA PARA `python_code_interpreter`:**
-    A ferramenta `python_code_interpreter` AUTOMATICAMENTE carrega os dados do escopo atual em uma variável chamada `df`.
-    Você **NUNCA** deve gerar código que tente ler arquivos do disco (ex: `pd.read_csv()`). SEMPRE opere diretamente na variável `df`.
+    **REGRA CRÍTICA PARA `python_code_interpreter`:**
+    - Os dados do escopo já estão na variável `df`.
+    - **NUNCA, JAMAIS** use `pd.read_csv()`. Use a variável `df` diretamente.
+    - **Exemplo CORRETO:** `resultado = df['coluna'].sum()`
+    - **Exemplo ERRADO:** `df = pd.read_csv(...)`
 
-    -   **ERRADO:** `meu_df = pd.read_csv('{scope}'); resultado = len(meu_df)`
-    -   **CERTO:** `resultado = len(df)`
-    -   **ERRADO:** `df_itens = pd.read_csv('202401_NFs_Itens.csv'); resultado = df_itens['Valor'].sum()`
-    -   **CERTO:** `resultado = df['Valor'].sum()` (quando o escopo está definido para '202401_NFs_Itens.csv')
-    ---
+    **CICLO DE TRABALHO (Siga exatamente):**
+    1.  **Thought:** (OBRIGATÓRIO) Descreva seu plano. Se for usar uma ferramenta, qual e por quê? Se for escrever código, qual código?
+    2.  **Action:** (OBRIGATÓRIO) Escreva um bloco de código JSON contendo sua ação.
+        ```json
+        {{"tool": "NOME_DA_FERRAMENTA", "tool_input": "ENTRADA_DA_FERRAMENTA"}}
+        ```
+    3.  Se a resposta já foi encontrada, use a ferramenta `final_answer`.
 
-    **Ciclo de Trabalho Obrigatório:**
-    1.  **Thought:** Descreva seu plano de ação em português. Se precisar de código, planeje o código correto usando a variável `df`.
-    2.  **Action:** Responda APENAS com um bloco de código JSON contendo a ferramenta e sua entrada.
-    3.  Se você já tem a resposta final, use a ferramenta 'final_answer'.
-
-    **Inicie o processo para a pergunta do usuário.**
-    **Pergunta:** "{query}"
+    **INICIE AGORA.**
+    **Pergunta do Usuário:** "{query}"
     """
     
     response = model.generate_content(prompt)
