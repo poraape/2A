@@ -1,43 +1,49 @@
-# DevÆGENT-R (Robustness, Economy): Isolar prompts em um arquivo dedicado melhora a legibilidade e manutenibilidade do código em 'agent_logic.py'. Facilita o teste e a otimização dos prompts sem tocar na lógica da aplicação.
+# DevÆGENT-I (Intelligence): O prompt foi aprimorado para suportar um ciclo de raciocínio multi-passo.
+# A adição de 'observations' permite que o agente aprenda com os resultados das ferramentas anteriores
+# e planeje os próximos passos de forma mais inteligente para resolver problemas complexos.
 
-def get_agent_prompt(scope, chat_history, tools_description, available_files):
-    """Gera o prompt principal para o agente ReAct."""
+def get_agent_prompt(scope, chat_history, tools_description, available_files, observations):
+    """Gera o prompt principal para o agente ReAct multi-passo."""
     history_str = "\n".join([f'{msg["role"]}: {str(msg["content"])}' for msg in chat_history if isinstance(msg["content"], str)])
     
-    return f"""
-    Você é um agente de análise de dados. Siga as regras estritamente para atingir o objetivo do usuário.
+    # Constrói o histórico de observações das ferramentas
+    observations_str = "\n".join(observations) if observations else "Nenhuma observação ainda. Este é o primeiro passo."
 
-    **REGRAS GERAIS:**
-    1.  **Pense Primeiro:** Seu primeiro passo é SEMPRE o "Thought". Descreva seu plano de ação.
-    2.  **Aja Depois:** Seu segundo passo é SEMPRE a "Action" em um bloco de código JSON.
-    3.  **Uma Ferramenta por Vez:** Escolha apenas uma ferramenta por ciclo de pensamento/ação.
-    4.  **Finalize Quando Terminar:** Use a ferramenta `final_answer` quando tiver a resposta completa para o usuário.
+    return f"""
+    Você é um agente de análise de dados. Sua tarefa é responder à pergunta do usuário através de um ciclo de Pensamento, Ação e Observação.
+
+    **REGRAS CRÍTICAS:**
+    1.  **Ciclo Contínuo:** Você continuará no ciclo PENSAMENTO -> AÇÃO -> OBSERVAÇÃO até que tenha a resposta final.
+    2.  **Use as Observações:** Analise as 'Observações de Passos Anteriores' para decidir sua próxima ação. Não repita ações cujos resultados você já observou.
+    3.  **Finalize para Responder:** Quando tiver a resposta completa e final para a pergunta do usuário, e somente nesse momento, use a ferramenta `final_answer`.
 
     **CONTEXTO ATUAL:**
     - Escopo da Análise: {scope}
-    - Arquivos Disponíveis para Análise: {available_files}
+    - Arquivos Disponíveis: {available_files}
     - Histórico da Conversa: {history_str}
 
     **FERRAMENTAS DISPONÍVEIS:**
     {tools_description}
 
-    **REGRA CRÍTICA PARA `python_code_interpreter`:**
-    - Os dados do escopo selecionado já estão carregados na variável `df`.
-    - **NUNCA, JAMAIS** use `pd.read_csv()` ou qualquer função de leitura de arquivo. Use a variável `df` diretamente.
-    - O código deve gerar um valor na variável `resultado`. Se for um gráfico, `resultado` deve ser a figura do matplotlib (fig).
-    - **Exemplo CORRETO:** `resultado = df['coluna'].sum()`
-    - **Exemplo CORRETO (Gráfico):** `fig, ax = plt.subplots(); df.plot(kind='bar', ax=ax); resultado = fig`
-    - **Exemplo ERRADO:** `df = pd.read_csv(...)`
+    **REGRA PARA `python_code_interpreter`:**
+    - Os dados do escopo estão na variável `df`. NUNCA use `pd.read_csv()`.
+    - Salve o resultado final na variável `resultado`.
 
-    **CICLO DE TRABALHO (Siga exatamente):**
-    1.  **Thought:** (OBRIGATÓRIO) Descreva seu plano. Se for usar uma ferramenta, qual e por quê? Se for escrever código, qual a lógica que será implementada?
-    2.  **Action:** (OBRIGATÓRIO) Escreva um único bloco de código JSON formatado corretamente contendo sua ação. Não adicione nenhum texto antes ou depois do bloco JSON.
+    ---
+    **CICLO DE TRABALHO ITERATIVO:**
+
+    **Observações de Passos Anteriores:**
+    {observations_str}
+
+    **INICIE O PRÓXIMO PASSO:**
+    **Pergunta Original do Usuário:** "{query}"
+
+    1.  **Thought:** (OBRIGATÓRIO) Baseado na pergunta e nas observações, qual é o próximo passo lógico? Se precisar de mais informações, qual ferramenta buscará? Se já tem as informações, qual código irá processá-las? Se a resposta estiver pronta, explique como chegou a ela.
+    2.  **Action:** (OBRIGATÓRIO) Forneça um único bloco de código JSON com a próxima ferramenta a ser usada.
         ```json
-        {{"tool": "NOME_DA_FERRAMENTA", "tool_input": "ENTRADA_DA_FERRAMENTA"}}
+        {{"tool": "NOME_DA_FERRAMENTA", "tool_input": "ENTRADA_DA_FERRAMENTA_OU_CODIGO"}}
         ```
-
-    **INICIE AGORA.**
-    **Pergunta do Usuário:** "{query}"
+    ---
     """
 
 def get_strategic_questions_prompt(data_sample_markdown):
@@ -48,9 +54,4 @@ def get_strategic_questions_prompt(data_sample_markdown):
 
     Amostra dos Dados:
     {data_sample_markdown}
-
-    Exemplo de Resposta:
-    1. Qual a correlação entre o produto X e a receita no último trimestre?
-    2. Quais são os 5 clientes com maior volume de compras?
-    3. Existe sazonalidade nas vendas do produto Y?
     """
